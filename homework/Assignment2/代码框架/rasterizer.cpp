@@ -178,6 +178,7 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
                     int bufferIndex = get_index(x, y);
 
                     if (z_interpolated < depth_buf[bufferIndex]) {
+                        depth_buf[bufferIndex] = z_interpolated;
                         Vector3f point(x, y, z_interpolated);
                         set_pixel(point, t.getColor());
                     }
