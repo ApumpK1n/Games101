@@ -127,7 +127,6 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
     bool MSAA = true;
     if (MSAA) 
     {
-        // 格子里的细分四个小点坐标
         std::vector<Eigen::Vector2f> pos
         {
             {0.25,0.25},
@@ -137,15 +136,10 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
         };
         for (int x = x_l; x <= x_r; x++) {
             for (int y = y_b; y <= y_t; y++) {
-                // 记录最小深度
                 float minDepth = FLT_MAX;
-                // 四个小点中落入三角形中的点的个数
                 int count = 0;
-                // 对四个小点坐标进行判断 
                 for (int i = 0; i < 4; i++) {
-                    // 小点是否在三角形内
                     if (insideTriangle((float)x + pos[i][0], (float)y + pos[i][1], t.v)) {
-                        // 如果在，对深度z进行插值
                         auto tup = computeBarycentric2D((float)x + pos[i][0], (float)y + pos[i][1], t.v);
                         float alpha;
                         float beta;
@@ -163,9 +157,7 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
                         Vector3f color = t.getColor() * count / 4.0;
                         Vector3f point(3);
                         point << (float)x, (float)y, minDepth;
-                        // 替换深度
                         depth_buf[get_index(x, y)] = minDepth;
-                        // 修改颜色
                         set_pixel(point, color);
                     }
                 }
