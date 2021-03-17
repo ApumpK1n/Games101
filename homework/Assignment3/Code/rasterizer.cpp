@@ -314,7 +314,7 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t, const std::array<Eig
                     
                         depth_buf[bufferIndex] = zp;
 
-                        Vector3f point(x, y, zp);
+                        Vector2i point(x, y);
                         set_pixel(point, pixel_color);
                     }
                 }

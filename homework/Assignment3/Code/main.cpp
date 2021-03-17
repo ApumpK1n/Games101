@@ -64,7 +64,7 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float z
         0, 0, 1, 0;
 
 
-    double top = zNear * tan(eye_fov / 2);
+    double top = -zNear * tan(eye_fov / 2);
     double bottom = -top;
     double right = top * aspect_ratio;
     double left = -right;
@@ -83,7 +83,7 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float z
         0, 0, 0, 1;
 
     Eigen::Matrix4f othographic = orthoScale * orthoTrans;
-    projection = othographic * persp2ortho;
+    projection = othographic * persp2ortho * projection;
     return projection;
 }
 
