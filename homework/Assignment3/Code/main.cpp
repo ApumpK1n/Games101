@@ -247,6 +247,30 @@ Eigen::Vector3f displacement_fragment_shader(const fragment_shader_payload& payl
     // Position p = p + kn * n * h(u,v)
     // Normal n = normalize(TBN * ln)
 
+    float x = normal.x();
+    float y = normal.y();
+    float z = normal.z();
+    Eigen::Vector3f t = { x * y / std::sqrt(x * x + z * z), std::sqrt(x * x + z * z), z*y / std::sqrt(x * x + z * z) };
+    Eigen::Vector3f b = normal.cross(t);
+    Eigen::Matrix3f TBN;
+    
+    TBN << t.x(), b.x(), normal.x(),
+		t.y(), b.y(), normal.y(),
+		t.z(), b.z(), normal.z();
+
+    float u = payload.tex_coords.x();
+	float v = payload.tex_coords.y();
+	float w = payload.texture->width;
+	float h = payload.texture->height;
+
+    float dU = kh * kn * (payload.texture->getColor(u + 1.0f / w , v).norm() - payload.texture->getColor(u, v).norm());
+	float dV = kh * kn * (payload.texture->getColor(u, v + 1.0f / h).norm() - payload.texture->getColor(u, v).norm());
+
+
+    Eigen::Vector3f ln = {-dU, -dV, 1.0f};
+    normal = (TBN * ln).normalized();
+
+    point += (kn * normal * payload.texture->getColor(u , v).norm());
 
     Eigen::Vector3f result_color = {0, 0, 0};
 
@@ -255,7 +279,21 @@ Eigen::Vector3f displacement_fragment_shader(const fragment_shader_payload& payl
         // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular* 
         // components are. Then, accumulate that result on the *result_color* object.
 
+        Eigen::Vector3f l = (light.position - point).normalized();
+        Eigen::Vector3f v = (eye_pos - point).normalized();
+        Eigen::Vector3f h = (l + v).normalized();
+        float r2 = (light.position - point).squaredNorm();
 
+        //ambient
+        Eigen::Vector3f La = ka.cwiseProduct(amb_light_intensity);
+        
+        //diffuse
+        Eigen::Vector3f Ld = kd.cwiseProduct(light.intensity / r2 * std::max(0.0f, normal.dot(l)));
+
+        //specular
+        Eigen::Vector3f Ls = ks.cwiseProduct(light.intensity / r2 * std::max(0.0f, std::pow(normal.dot(h), p)));
+
+        result_color += La + Ld + Ls;
     }
 
     return result_color * 255.f;
