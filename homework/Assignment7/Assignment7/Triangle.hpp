@@ -253,6 +253,12 @@ inline Intersection Triangle::getIntersection(Ray ray)
     t_tmp = dotProduct(e2, qvec) * det_inv;
 
     // TODO find ray triangle intersection
+    inter.coords = ray.origin + t_tmp * ray.direction;
+    inter.distance = t_tmp;
+    inter.happened = true;
+    inter.m = m;
+    inter.normal = normal;
+    inter.obj = this;
 
     return inter;
 }
