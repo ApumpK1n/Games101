@@ -17,6 +17,23 @@ namespace CGL {
 //        for (auto &i : pinned_nodes) {
 //            masses[i]->pinned = true;
 //        }
+
+        for(int i = 0; i < num_nodes; i++)
+        {
+            Vector2D position = start + i * (end-start) / (num_nodes - 1);
+            Mass mass = Mass(position, node_mass, false);
+            masses.push_back(mass);
+
+            if (i != 0){
+                Mass lastMass = masses[i - 1];
+                Spring spring = Spring(lastMass, mass, k);
+                springs.push_back(spring);
+            }
+        }
+
+        for (auto &i : pinned_nodes) {
+            masses[i]->pinned = true;
+        }
     }
 
     void Rope::simulateEuler(float delta_t, Vector2D gravity)
