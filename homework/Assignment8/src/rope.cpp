@@ -21,12 +21,12 @@ namespace CGL {
         for(int i = 0; i < num_nodes; i++)
         {
             Vector2D position = start + i * (end-start) / (num_nodes - 1);
-            Mass mass = Mass(position, node_mass, false);
+            Mass * mass = new Mass(position, node_mass, false);
             masses.push_back(mass);
 
             if (i != 0){
-                Mass lastMass = masses[i - 1];
-                Spring spring = Spring(lastMass, mass, k);
+                Mass * lastMass = masses[i - 1];
+                Spring *spring = new Spring(lastMass, mass, k);
                 springs.push_back(spring);
             }
         }
@@ -41,6 +41,10 @@ namespace CGL {
         for (auto &s : springs)
         {
             // TODO (Part 2): Use Hooke's law to calculate the force on a node
+            Vector2D ab = s->m2->position - s->m1->position;
+            Vector2D f =  s->k *  (ab / ab.norm()) * (ab.norm() - s->rest_length);
+            s->m1->forces += f;
+            s->m2->forces -= f;
         }
 
         for (auto &m : masses)
@@ -48,10 +52,24 @@ namespace CGL {
             if (!m->pinned)
             {
                 // TODO (Part 2): Add the force due to gravity, then compute the new velocity and position
+                m->forces += gravity * m->mass;
 
                 // TODO (Part 2): Add global damping
-            }
+                float k_d_global = 0.01;
+                m->forces += - k_d_global * m->velocity;
 
+                Vector2D a =  m->forces / m->mass;
+                // for explicit method
+                //Vector2D vet = m->velocity + a * delta_t;
+                //Vector2D pos = m->position + m->velocity * delta_t;
+
+                //for semi-implicit method
+                Vector2D vet = m->velocity + a * delta_t;
+                Vector2D pos = m->position + vet * delta_t;
+
+                m->velocity = vet;
+                m->position = pos;
+            }
             // Reset all forces on each mass
             m->forces = Vector2D(0, 0);
         }
@@ -62,17 +80,27 @@ namespace CGL {
         for (auto &s : springs)
         {
             // TODO (Part 3): Simulate one timestep of the rope using explicit Verlet （solving constraints)
+            Vector2D ab = s->m2->position - s->m1->position;
+            Vector2D f = s->k *  (ab / ab.norm()) * (ab.norm() - s->rest_length);
+            s->m1->forces += f;
+            s->m2->forces -= f;
         }
 
         for (auto &m : masses)
         {
             if (!m->pinned)
             {
-                Vector2D temp_position = m->position;
+                m->forces += gravity * m->mass;
+                Vector2D a = m->forces / m->mass;
+
                 // TODO (Part 3.1): Set the new position of the rope mass
-                
+                Vector2D lastposition = m->position;
                 // TODO (Part 4): Add global Verlet damping
+                float dampfactor = 0.00005;
+                m->position = m->position +  (1 - dampfactor) * (m->position - m->last_position) + a * delta_t *delta_t;
+                m->last_position = lastposition;
             }
+            m->forces =  Vector2D(0,0);
         }
     }
 }
