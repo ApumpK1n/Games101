@@ -24,8 +24,8 @@ def round_up(f, s):
 grid_size = (round_up(boundary[0], 1), round_up(boundary[1], 1))
 
 dim = 2
-bg_color = 0x112f41
-particle_color = 0x068587
+bg_color = 0xffffff
+particle_color = 0x00BFFF
 boundary_color = 0xebaca2
 num_particles_x = 60
 num_particles_y = 20
@@ -155,10 +155,10 @@ def move_board():
 
 @ti.kernel
 def prologue():
-    # save old positions
+    # 存储旧位置
     for i in positions:
         old_positions[i] = positions[i]
-    # apply gravity within boundary
+    # 重力
     for i in positions:
         g = ti.Vector([0.0, -9.8])
         pos, vel = positions[i], velocities[i]
@@ -166,7 +166,6 @@ def prologue():
         pos += vel * time_delta
         positions[i] = confine_position_to_boundary(pos)
 
-    # clear neighbor lookup table
     for I in ti.grouped(grid_num_particles):
         grid_num_particles[I] = 0
     for I in ti.grouped(particle_neighbors):
