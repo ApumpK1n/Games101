@@ -45,8 +45,6 @@ lambda_epsilon = 100.0
 pbf_num_iters = 5
 corr_deltaQ_coeff = 0.3
 corrK = 0.001
-# Need ti.pow()
-# corrN = 4.0
 neighbor_radius = h * 1.05
 
 poly6_factor = 315.0 / 64.0 / math.pi
