@@ -29,14 +29,14 @@ bg_color = 0xffffff
 particle_color = 0x00BFFF
 boundary_color = 0xebaca2
 num_particles_x = 2
-num_particles_y = 10
+num_particles_y = 2
 num_particles_z = 1
 num_particles = num_particles_x * num_particles_y * num_particles_z
 max_num_particles_per_cell = 100
 max_num_neighbors = 100
 time_delta = 1.0 / 20.0
 epsilon = 0
-particle_radius = 3.0
+particle_radius = 2
 particle_radius_in_world = particle_radius / screen_to_world_ratio
 
 # PBF params
@@ -269,17 +269,27 @@ def run_pbf():
 
 
 def render(gui):
-    gui.clear(bg_color)
+    # gui.clear(bg_color)
+    # pos_np = positions.to_numpy()
+    # for j in range(dim):
+    #     pos_np[:, j] *= screen_to_world_ratio / screen_res[j]
+    # gui.circles(pos_np, radius=particle_radius, color=particle_color)
+    # gui.rect((0, 0), (board_states_right[None][0] / boundary[0], 1),
+    #          radius=1.5,
+    #          color=boundary_color)
+    # gui.rect((board_states_left[None][0] / boundary[0], 1), (0, 0),
+    #         radius=1.5,
+    #         color=boundary_color)
+    # gui.show()
+
+    scene.input(gui)
+    scene.render()
     pos_np = positions.to_numpy()
     for j in range(dim):
         pos_np[:, j] *= screen_to_world_ratio / screen_res[j]
-    gui.circles(pos_np, radius=particle_radius, color=particle_color)
-    gui.rect((0, 0), (board_states_right[None][0] / boundary[0], 1),
-             radius=1.5,
-             color=boundary_color)
-    gui.rect((board_states_left[None][0] / boundary[0], 1), (0, 0),
-            radius=1.5,
-            color=boundary_color)
+    pars.set_particles(pos_np)
+    #pars.set_particle_radii(np.ones(len(pos_np), dtype=np.float32) * particle_radius)
+    gui.set_image(scene.img)
     gui.show()
 
 
@@ -291,7 +301,7 @@ def init_particles():
         offs = ti.Vector([(boundary[0] - delta * num_particles_x) * 0.5,
                           boundary[1] * 0.02, 0.0])
         positions[i] = ti.Vector([i % num_particles_x, i // (num_particles_x * num_particles_z), 
-        (i - ((i // (num_particles_x * num_particles_z)) * (num_particles_x * num_particles_z))) // num_particles_x ]) * delta + offs
+        0]) * delta + offs
         
         for c in ti.static(range(dim)):
             velocities[i][c] = (ti.random() - 0.5) * 4
@@ -311,15 +321,15 @@ def print_stats():
 
 scene = tina.Scene((800, 400), maxpars=num_particles, bgcolor=ti.hex_to_rgb(0xaaaaff))
 pars = tina.SimpleParticles(num_particles, radius=particle_radius)
-color = tina.Diffuse(color=ti.hex_to_rgb(0xffaaaa))
-scene.add_object(pars, color)
+color = tina.Diffuse(color=ti.hex_to_rgb(particle_color))
+scene.add_object(pars)
 
 gui = ti.GUI('PBF3D', scene.res)
 scene.init_control(gui, center=[0.5, 0.5, 0.5], radius=1.5)
 
-scene.lighting.clear_lights()
-scene.lighting.add_light([-0.4, 1.5, 1.8], color=[0.8, 0.8, 0.8])
-scene.lighting.set_ambient_light([0.22, 0.22, 0.22])
+# scene.lighting.clear_lights()
+# scene.lighting.add_light([-0.4, 1.5, 1.8], color=[0.8, 0.8, 0.8])
+# scene.lighting.set_ambient_light([0.22, 0.22, 0.22])
 
 def main():
     init_particles()
@@ -331,15 +341,7 @@ def main():
         run_pbf()
         if gui.frame % 20 == 1:
             print_stats()
-        
-        scene.input(gui)
-        scene.render()
-        pos = positions.to_numpy()
-        pars.set_particles(pos)
-        pars.set_particle_radii(np.ones(len(pos), dtype=np.float32) * particle_radius)
-        gui.set_image(scene.img)
-        gui.show()
-    
+        render(gui)
 
 
 if __name__ == '__main__':
