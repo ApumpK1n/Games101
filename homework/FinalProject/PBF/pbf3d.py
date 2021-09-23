@@ -9,7 +9,7 @@ import tina
 
 ti.init(arch=ti.gpu)
 
-screen_res = (800, 400, 400)
+screen_res = (400, 400, 400)
 screen_to_world_ratio = 10.0
 boundary = (screen_res[0] / screen_to_world_ratio,
             screen_res[1] / screen_to_world_ratio,
@@ -26,17 +26,17 @@ grid_size = (round_up(boundary[0], 1), round_up(boundary[1], 1), round_up(bounda
 
 dim = 3
 bg_color = 0xffffff
-particle_color = 0x00BFFF
+particle_color = 0x87CEEB
 boundary_color = 0xebaca2
-num_particles_x = 2
-num_particles_y = 2
-num_particles_z = 1
+num_particles_x = 30
+num_particles_y = 20
+num_particles_z = 10
 num_particles = num_particles_x * num_particles_y * num_particles_z
 max_num_particles_per_cell = 100
 max_num_neighbors = 100
 time_delta = 1.0 / 20.0
 epsilon = 0
-particle_radius = 2
+particle_radius = 3.0
 particle_radius_in_world = particle_radius / screen_to_world_ratio
 
 # PBF params
@@ -65,6 +65,7 @@ lambdas = ti.field(float)
 position_deltas = ti.Vector.field(dim, float)
 board_states_right = ti.Vector.field(dim, float)
 board_states_left = ti.Vector.field(dim, float)
+colors = ti.field(ti.f32, num_particles)
 
 
 ti.root.dense(ti.i, num_particles).place(old_positions, positions, velocities)
@@ -118,14 +119,16 @@ def get_cell(pos):
 def is_in_grid(c):
     # @c: Vector(i32)
     return 0 <= c[0] and c[0] < grid_size[0] and 0 <= c[1] and c[
-        1] < grid_size[1]
+        1] < grid_size[1] and 0 <= c[2] and c[2] < grid_size[2]
 
 
 @ti.func
 def confine_position_to_boundary(p):
-    bmin = ti.Vector([board_states_left[None][0] + particle_radius_in_world, 0, 0]) 
-    bmax = ti.Vector([board_states_right[None][0], boundary[1], boundary[2]
-                      ]) - particle_radius_in_world
+    #bmin = ti.Vector([board_states_left[None][0], 0, 0])  + particle_radius_in_world
+    #bmax = ti.Vector([board_states_right[None][0], boundary[1], boundary[2]
+    #                  ]) - particle_radius_in_world
+    bmin = ti.Vector([ 0 , 0 , 0 ]) - particle_radius_in_world
+    bmax = ti.Vector([board_states_right[None][0] ,boundary[1],boundary[2]]) - particle_radius_in_world
     for i in ti.static(range(dim)):
         # Use randomness to prevent particles from sticking into each other after clamping
         if p[i] <= bmin[i]:
@@ -269,25 +272,15 @@ def run_pbf():
 
 
 def render(gui):
-    # gui.clear(bg_color)
-    # pos_np = positions.to_numpy()
-    # for j in range(dim):
-    #     pos_np[:, j] *= screen_to_world_ratio / screen_res[j]
-    # gui.circles(pos_np, radius=particle_radius, color=particle_color)
-    # gui.rect((0, 0), (board_states_right[None][0] / boundary[0], 1),
-    #          radius=1.5,
-    #          color=boundary_color)
-    # gui.rect((board_states_left[None][0] / boundary[0], 1), (0, 0),
-    #         radius=1.5,
-    #         color=boundary_color)
-    # gui.show()
-
     scene.input(gui)
     scene.render()
     pos_np = positions.to_numpy()
-    for j in range(dim):
-        pos_np[:, j] *= screen_to_world_ratio / screen_res[j]
+    # for j in range(dim):
+    #     pos_np[:, j] *= screen_to_world_ratio / screen_res[j]
+
+    #pars.set_particle_radii(radius.to_numpy())
     pars.set_particles(pos_np)
+    #pars.set_particle_colors(particle_color)
     #pars.set_particle_radii(np.ones(len(pos_np), dtype=np.float32) * particle_radius)
     gui.set_image(scene.img)
     gui.show()
@@ -297,9 +290,9 @@ def render(gui):
 def init_particles():
     print("init")
     for i in range(num_particles):
-        delta = h * 0.5
+        delta = h * 0.8
         offs = ti.Vector([(boundary[0] - delta * num_particles_x) * 0.5,
-                          boundary[1] * 0.02, 0.0])
+                          boundary[1] * 0.02, boundary[2] * 0.02])
         positions[i] = ti.Vector([i % num_particles_x, i // (num_particles_x * num_particles_z), 
         0]) * delta + offs
         
@@ -319,24 +312,27 @@ def print_stats():
     #print(f'  #neighbors per particle: avg={avg:.2f} max={max}')
     print(f'left:{board_states_left[None][0]}, right:{board_states_right[None][0]} boundary={boundary}' )
 
-scene = tina.Scene((800, 400), maxpars=num_particles, bgcolor=ti.hex_to_rgb(0xaaaaff))
-pars = tina.SimpleParticles(num_particles, radius=particle_radius)
+
+scene = tina.Scene((800, 400), maxpars=num_particles, bgcolor=ti.hex_to_rgb(0xffffff))
+pars = tina.SimpleParticles(num_particles, radius=particle_radius_in_world)
+
 color = tina.Diffuse(color=ti.hex_to_rgb(particle_color))
-scene.add_object(pars)
+scene.add_object(pars, color)
+
+scene.lighting.clear_lights()
+scene.lighting.add_light([-0.4, 1.5, 1.8], color=[1, 1, 1])
+scene.lighting.set_ambient_light([1, 1, 1])
 
 gui = ti.GUI('PBF3D', scene.res)
-scene.init_control(gui, center=[0.5, 0.5, 0.5], radius=1.5)
-
-# scene.lighting.clear_lights()
-# scene.lighting.add_light([-0.4, 1.5, 1.8], color=[0.8, 0.8, 0.8])
-# scene.lighting.set_ambient_light([0.22, 0.22, 0.22])
+scene.init_control(gui, center=[boundary[0] / 2, boundary[1]/2, boundary[2] * 2])
 
 def main():
     init_particles()
     #print(f'boundary={boundary} grid={grid_size} cell_size={cell_size}')
     #gui = ti.GUI('PBF2D', screen_res)
     while gui.running and not gui.get_event(gui.ESCAPE):
-        
+        if gui.is_pressed('r'):
+            init_particles()
         move_board()
         run_pbf()
         if gui.frame % 20 == 1:
