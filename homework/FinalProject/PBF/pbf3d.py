@@ -26,7 +26,7 @@ grid_size = (round_up(boundary[0], 1), round_up(boundary[1], 1), round_up(bounda
 
 dim = 3
 bg_color = 0xffffff
-particle_color = 0x87CEEB
+particle_color = 0x008B8B
 boundary_color = 0xebaca2
 num_particles_x = 30
 num_particles_y = 20
@@ -48,6 +48,8 @@ pbf_num_iters = 5
 corr_deltaQ_coeff = 0.3
 corrK = 0.001
 neighbor_radius = h * 1.05
+viscosity = 0.01
+vorticityConfinement = 0.1
 
 poly6_factor = 315.0 / 64.0 / math.pi
 spiky_grad_factor = -45.0 / math.pi
@@ -261,7 +263,35 @@ def epilogue():
     # update velocities
     for i in positions:
         velocities[i] = (positions[i] - old_positions[i]) / time_delta
-    # no vorticity/xsph because we cannot do cross product in 2D...
+
+    #Eq(15) ~ Eq(17) Vorticity Confinement 涡度限制/ xsph 人工粘性
+    for p_i in positions:
+        pos_i = positions[p_i]
+        v_i =  velocities[p_i]
+
+        delta_poly6 = ti.Vector([0.0, 0.0, 0.0])
+        delta_spiky = ti.Vector([0.0, 0.0, 0.0])
+        for j in range(particle_num_neighbors[p_i]): 
+            p_j = particle_neighbors[p_i, j]
+            if p_j < 0:
+                break
+            pos_ji = pos_i - positions[p_j]
+            v_j =  velocities[p_j]
+            v_ij = v_j - v_i
+
+            delta_poly6 += v_ij * poly6_value(pos_ji.norm(), h)
+            #Eq(15)
+            delta_spiky += v_ij.cross(spiky_gradient(pos_ji, h))
+        
+        #Eq(16)
+        #n = delta_spiky#spiky_gradient(delta_spiky, h)
+        #N = n / n.norm()
+        #f_vorticity = vorticityConfinement * (N.cross(delta_spiky))
+
+        #v_i += f_vorticity
+        #Eq(17)
+        v_i += viscosity * delta_poly6
+        velocities[p_i] = v_i
 
 
 def run_pbf():
@@ -313,7 +343,7 @@ def print_stats():
     print(f'left:{board_states_left[None][0]}, right:{board_states_right[None][0]} boundary={boundary}' )
 
 
-scene = tina.Scene((800, 400), maxpars=num_particles, bgcolor=ti.hex_to_rgb(0xffffff))
+scene = tina.Scene((800, 800), maxpars=num_particles, bgcolor=ti.hex_to_rgb(0xffffff))
 pars = tina.SimpleParticles(num_particles, radius=particle_radius_in_world)
 
 color = tina.Diffuse(color=ti.hex_to_rgb(particle_color))
