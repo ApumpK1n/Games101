@@ -313,7 +313,7 @@ def print_stats():
     print(f'left:{board_states_left[None][0]}, right:{board_states_right[None][0]} boundary={boundary}' )
 
 
-scene = tina.Scene((800, 400), maxpars=num_particles, bgcolor=ti.hex_to_rgb(0xffffff))
+scene = tina.Scene((800, 800), maxpars=num_particles, bgcolor=ti.hex_to_rgb(0xffffff))
 pars = tina.SimpleParticles(num_particles, radius=particle_radius_in_world)
 
 color = tina.Diffuse(color=ti.hex_to_rgb(particle_color))
